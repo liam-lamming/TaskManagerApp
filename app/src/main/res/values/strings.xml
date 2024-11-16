@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">Task Manager</string>
+
+    <!-- Priority Options -->
+    <string-array name="task_priority">
+        <item>High</item>
+        <item>Medium</item>
+        <item>Low</item>
+    </string-array>
+
+    <!-- Category Options -->
+    <string-array name="task_category">
+        <item>Work</item>
+        <item>Personal</item>
+        <item>Leisure</item>
+    </string-array>
+</resources>
