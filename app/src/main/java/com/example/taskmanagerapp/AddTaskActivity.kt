@@ -1,6 +1,7 @@
 package com.example.taskmanagerapp
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -26,8 +27,13 @@ class AddTaskActivity : AppCompatActivity() {
             val category = editTextCategory.text.toString().trim()
 
             if (title.isNotEmpty() && description.isNotEmpty()) {
-                val newTask = Task(title = title, description = description, priority = priority, category = category)
-                val resultIntent = intent
+                val newTask = Task(
+                    title = title,
+                    description = description,
+                    priority = priority,
+                    category = category
+                )
+                val resultIntent = Intent() // Explicitly create a new Intent
                 resultIntent.putExtra(MainActivity.NEW_TASK_EXTRA, newTask)
                 setResult(Activity.RESULT_OK, resultIntent)
                 finish()

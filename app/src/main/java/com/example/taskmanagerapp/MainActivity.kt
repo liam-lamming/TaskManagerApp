@@ -1,15 +1,21 @@
 package com.example.taskmanagerapp
 
+import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 class MainActivity : AppCompatActivity() {
 
@@ -17,6 +23,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var taskAdapter: TaskAdapter
     private lateinit var taskList: MutableList<Task>
     private lateinit var dbHelper: TaskDatabaseHelper
+
+    private val firebaseDatabase = FirebaseDatabase.getInstance()
 
     companion object {
         const val NEW_TASK_REQUEST_CODE = 1
@@ -41,7 +49,7 @@ class MainActivity : AppCompatActivity() {
         recyclerViewTasks.layoutManager = LinearLayoutManager(this)
 
         // Initialize task list and adapter
-        taskList = dbHelper.getAllTasks().toMutableList()
+        taskList = mutableListOf()
         taskAdapter = TaskAdapter(taskList) { task, position ->
             showTaskOptions(task, position)
         }
@@ -49,12 +57,11 @@ class MainActivity : AppCompatActivity() {
 
         // Set up Floating Action Button
         val fabAddTask: FloatingActionButton = findViewById(R.id.fabAddTask)
-        fabAddTask.setOnClickListener {
-            navigateToAddTask()
-        }
+        fabAddTask.setOnClickListener { navigateToAddTask() }
 
-        // Load data from database
+        // Load tasks
         loadTasksFromDatabase()
+        syncFirebaseToSQLite()
     }
 
     /**
@@ -64,6 +71,42 @@ class MainActivity : AppCompatActivity() {
         taskList.clear()
         taskList.addAll(dbHelper.getAllTasks())
         taskAdapter.notifyDataSetChanged()
+    }
+
+    /**
+     * Write a task to Firebase Realtime Database.
+     */
+    private fun writeToRealtimeDatabase(task: Task) {
+        firebaseDatabase.getReference("tasks").child(task.id.toString())
+            .setValue(task)
+            .addOnSuccessListener {
+                Toast.makeText(this, "Task added to Firebase", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Failed to write task to Firebase", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    /**
+     * Read tasks from Firebase Realtime Database and sync with SQLite.
+     */
+    private fun syncFirebaseToSQLite() {
+        firebaseDatabase.getReference("tasks").addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                for (taskSnapshot in snapshot.children) {
+                    val task = taskSnapshot.getValue(Task::class.java)
+                    if (task != null) {
+                        dbHelper.addTask(task)
+                    }
+                }
+                loadTasksFromDatabase()
+                Toast.makeText(this@MainActivity, "Tasks synced from Firebase", Toast.LENGTH_SHORT).show()
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Toast.makeText(this@MainActivity, "Failed to sync tasks: ${error.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 
     /**
@@ -78,9 +121,8 @@ class MainActivity : AppCompatActivity() {
      * Handle task click options: edit or delete.
      */
     private fun showTaskOptions(task: Task, position: Int) {
-        // Example dialog options (you can use AlertDialog or a BottomSheetDialog)
         val options = arrayOf("Edit", "Delete")
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        AlertDialog.Builder(this)
             .setTitle("Select an option")
             .setItems(options) { _, which ->
                 when (which) {
@@ -102,22 +144,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Delete or Update a task and refresh the adapter.
+     * Delete a task and refresh the adapter.
      */
-    // Delete task method
     private fun deleteTask(position: Int) {
         val taskToDelete = taskList[position]
         dbHelper.deleteTask(taskToDelete.id)
         taskList.removeAt(position)
         taskAdapter.notifyItemRemoved(position)
-        Toast.makeText(this, "Task deleted", Toast.LENGTH_SHORT).show()
-    }
 
-    // Update task method
-    private fun updateTask(position: Int, updatedTask: Task) {
-        taskList[position] = updatedTask
-        taskAdapter.notifyItemChanged(position)
-        Toast.makeText(this, "Task updated", Toast.LENGTH_SHORT).show()
+        // Remove from Firebase
+        firebaseDatabase.getReference("tasks").child(taskToDelete.id.toString()).removeValue()
+            .addOnSuccessListener {
+                Toast.makeText(this, "Task deleted from Firebase", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Failed to delete task from Firebase", Toast.LENGTH_SHORT).show()
+            }
     }
 
     /**
@@ -128,18 +170,20 @@ class MainActivity : AppCompatActivity() {
         if (resultCode == RESULT_OK) {
             when (requestCode) {
                 NEW_TASK_REQUEST_CODE -> {
-                    val newTask = data?.getSerializableExtra(NEW_TASK_EXTRA) as? Task
-                    newTask?.let {
-                        dbHelper.addTask(it)
+                    val newTask = data?.getParcelableExtra<Task>(NEW_TASK_EXTRA)
+                    if (newTask != null) {
+                        dbHelper.addTask(newTask)
+                        writeToRealtimeDatabase(newTask)
                         loadTasksFromDatabase()
                     }
                 }
                 EDIT_TASK_REQUEST_CODE -> {
-                    val updatedTask = data?.getSerializableExtra(EDIT_TASK_EXTRA) as? Task
+                    val updatedTask = data?.getParcelableExtra<Task>(EDIT_TASK_EXTRA)
                     val position = data?.getIntExtra(TASK_POSITION_EXTRA, -1) ?: -1
                     if (updatedTask != null && position >= 0) {
                         dbHelper.updateTask(updatedTask)
-                        loadTasksFromDatabase()
+                        writeToRealtimeDatabase(updatedTask)
+                        taskList[position] = updatedTask
                         taskAdapter.notifyItemChanged(position)
                     }
                 }

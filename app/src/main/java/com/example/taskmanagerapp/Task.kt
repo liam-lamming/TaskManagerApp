@@ -1,11 +1,13 @@
 package com.example.taskmanagerapp
 
-import java.io.Serializable
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 
+@Parcelize
 data class Task(
-    val id: Int = 0, // Integer value for id instead of String
-    val title: String,
-    val description: String,
-    val priority: String,
-    val category: String
-) : Serializable
+    var id: Int = 0,              // Default values ensure compatibility
+    var title: String = "",
+    var description: String = "",
+    var priority: String = "",
+    var category: String = ""
+) : Parcelable
