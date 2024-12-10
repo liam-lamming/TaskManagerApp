@@ -24,12 +24,12 @@ class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         val CREATE_TABLE = """
             CREATE TABLE $TABLE_NAME (
                 $COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                $COLUMN_TITLE TEXT,
-                $COLUMN_DESCRIPTION TEXT,
+                $COLUMN_TITLE TEXT NOT NULL,
+                $COLUMN_DESCRIPTION TEXT NOT NULL,
                 $COLUMN_PRIORITY TEXT,
                 $COLUMN_CATEGORY TEXT
             )
-        """
+        """.trimIndent()
         db?.execSQL(CREATE_TABLE)
     }
 
@@ -40,7 +40,9 @@ class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         }
     }
 
-    // Add a new task to the database
+    /**
+     * Add a new task to the database.
+     */
     fun addTask(task: Task): Long {
         val db = writableDatabase
         val values = ContentValues().apply {
@@ -50,49 +52,46 @@ class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
             put(COLUMN_CATEGORY, task.category)
         }
 
-        return db.insert(TABLE_NAME, null, values)
+        return try {
+            db.insertOrThrow(TABLE_NAME, null, values)
+        } catch (e: Exception) {
+            -1L // Return -1 to indicate failure
+        } finally {
+            db.close()
+        }
     }
 
-    // Retrieve all tasks from the database
+    /**
+     * Retrieve all tasks from the database.
+     */
     fun getAllTasks(): List<Task> {
         val taskList = mutableListOf<Task>()
-        val cursor: Cursor = readableDatabase.query(
-            TABLE_NAME,
-            arrayOf(COLUMN_ID, COLUMN_TITLE, COLUMN_DESCRIPTION, COLUMN_PRIORITY, COLUMN_CATEGORY),
-            null, null, null, null, null
-        )
+        val query = "SELECT * FROM $TABLE_NAME"
+        val db = readableDatabase
+        val cursor: Cursor? = db.rawQuery(query, null)
 
-        cursor.use {
-            it.moveToFirst()
-            while (!it.isAfterLast) {
-                // Get column indices and check if they are valid
-                val idIndex = it.getColumnIndex(COLUMN_ID)
-                val titleIndex = it.getColumnIndex(COLUMN_TITLE)
-                val descriptionIndex = it.getColumnIndex(COLUMN_DESCRIPTION)
-                val priorityIndex = it.getColumnIndex(COLUMN_PRIORITY)
-                val categoryIndex = it.getColumnIndex(COLUMN_CATEGORY)
-
-                if (idIndex >= 0 && titleIndex >= 0 && descriptionIndex >= 0 && priorityIndex >= 0 && categoryIndex >= 0) {
-                    // Create task if column indices are valid
+        cursor?.use {
+            if (it.moveToFirst()) {
+                do {
                     val task = Task(
-                        id = it.getInt(idIndex),
-                        title = it.getString(titleIndex),
-                        description = it.getString(descriptionIndex),
-                        priority = it.getString(priorityIndex),
-                        category = it.getString(categoryIndex)
+                        id = it.getInt(it.getColumnIndexOrThrow(COLUMN_ID)),
+                        title = it.getString(it.getColumnIndexOrThrow(COLUMN_TITLE)),
+                        description = it.getString(it.getColumnIndexOrThrow(COLUMN_DESCRIPTION)),
+                        priority = it.getString(it.getColumnIndexOrThrow(COLUMN_PRIORITY)),
+                        category = it.getString(it.getColumnIndexOrThrow(COLUMN_CATEGORY))
                     )
                     taskList.add(task)
-                }
-
-                it.moveToNext() // Move to the next row
+                } while (it.moveToNext())
             }
         }
 
-        cursor.close()
+        db.close()
         return taskList
     }
 
-    // Update an existing task
+    /**
+     * Update an existing task.
+     */
     fun updateTask(task: Task): Int {
         val db = writableDatabase
         val values = ContentValues().apply {
@@ -102,17 +101,40 @@ class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
             put(COLUMN_CATEGORY, task.category)
         }
 
-        return db.update(
-            TABLE_NAME,
-            values,
-            "$COLUMN_ID = ?",
-            arrayOf(task.id.toString()) // Update by task ID
-        )
+        return try {
+            db.update(TABLE_NAME, values, "$COLUMN_ID = ?", arrayOf(task.id.toString()))
+        } catch (e: Exception) {
+            0 // Return 0 to indicate failure
+        } finally {
+            db.close()
+        }
     }
 
-    // Delete a task by its ID
+    /**
+     * Delete a task by its ID.
+     */
     fun deleteTask(id: Int): Int {
         val db = writableDatabase
-        return db.delete(TABLE_NAME, "$COLUMN_ID = ?", arrayOf(id.toString()))
+        return try {
+            db.delete(TABLE_NAME, "$COLUMN_ID = ?", arrayOf(id.toString()))
+        } catch (e: Exception) {
+            0 // Return 0 to indicate failure
+        } finally {
+            db.close()
+        }
+    }
+
+    /**
+     * Clear all tasks from the database (for testing or reset purposes).
+     */
+    fun clearTasks(): Int {
+        val db = writableDatabase
+        return try {
+            db.delete(TABLE_NAME, null, null)
+        } catch (e: Exception) {
+            0 // Return 0 to indicate failure
+        } finally {
+            db.close()
+        }
     }
 }
