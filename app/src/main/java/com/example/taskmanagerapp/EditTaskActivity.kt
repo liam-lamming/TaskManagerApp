@@ -20,11 +20,13 @@ class EditTaskActivity : AppCompatActivity() {
         val editTextCategory: EditText = findViewById(R.id.editTextCategory)
         val buttonSave: Button = findViewById(R.id.buttonSave)
 
-        // Retrieve the task passed from MainActivity
+        // Retrieve the task and position passed from MainActivity
         val task = intent.getParcelableExtra<Task>(MainActivity.EDIT_TASK_EXTRA)
-        if (task == null) {
+        val position = intent.getIntExtra(MainActivity.TASK_POSITION_EXTRA, -1)
+
+        if (task == null || position == -1) {
             Toast.makeText(this, "Failed to load task details", Toast.LENGTH_SHORT).show()
-            finish() // Close the activity if task data is null
+            finish() // Close the activity if task data is null or position is invalid
             return
         }
 
@@ -36,27 +38,33 @@ class EditTaskActivity : AppCompatActivity() {
 
         // Handle save button click
         buttonSave.setOnClickListener {
-            val updatedTask = task.copy(
-                title = editTextTitle.text.toString().trim(),
-                description = editTextDescription.text.toString().trim(),
-                priority = editTextPriority.text.toString().trim(),
-                category = editTextCategory.text.toString().trim()
-            )
+            val updatedTitle = editTextTitle.text.toString().trim()
+            val updatedDescription = editTextDescription.text.toString().trim()
+            val updatedPriority = editTextPriority.text.toString().trim()
+            val updatedCategory = editTextCategory.text.toString().trim()
 
-            // Validate updated fields
-            if (updatedTask.title.isEmpty()) {
+            // Validate inputs
+            if (updatedTitle.isEmpty()) {
                 editTextTitle.error = "Title is required"
                 return@setOnClickListener
             }
-            if (updatedTask.description.isEmpty()) {
+            if (updatedDescription.isEmpty()) {
                 editTextDescription.error = "Description is required"
                 return@setOnClickListener
             }
 
+            // Update the task
+            val updatedTask = task.copy(
+                title = updatedTitle,
+                description = updatedDescription,
+                priority = updatedPriority,
+                category = updatedCategory
+            )
+
             // Pass the updated task back to MainActivity
             val resultIntent = Intent().apply {
                 putExtra(MainActivity.EDIT_TASK_EXTRA, updatedTask)
-                putExtra(MainActivity.TASK_POSITION_EXTRA, intent.getIntExtra(MainActivity.TASK_POSITION_EXTRA, -1))
+                putExtra(MainActivity.TASK_POSITION_EXTRA, position)
             }
             setResult(RESULT_OK, resultIntent)
             finish()

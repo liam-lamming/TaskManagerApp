@@ -53,7 +53,8 @@ class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         }
 
         return try {
-            db.insertOrThrow(TABLE_NAME, null, values)
+            val taskId = db.insertOrThrow(TABLE_NAME, null, values)
+            taskId
         } catch (e: Exception) {
             -1L // Return -1 to indicate failure
         } finally {
@@ -136,5 +137,37 @@ class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         } finally {
             db.close()
         }
+    }
+
+    /**
+     * Retrieve a task by its ID.
+     */
+    fun getTaskById(id: Int): Task? {
+        val db = readableDatabase
+        val cursor: Cursor? = db.query(
+            TABLE_NAME,
+            null,
+            "$COLUMN_ID = ?",
+            arrayOf(id.toString()),
+            null,
+            null,
+            null
+        )
+
+        var task: Task? = null
+        cursor?.use {
+            if (it.moveToFirst()) {
+                task = Task(
+                    id = it.getInt(it.getColumnIndexOrThrow(COLUMN_ID)),
+                    title = it.getString(it.getColumnIndexOrThrow(COLUMN_TITLE)),
+                    description = it.getString(it.getColumnIndexOrThrow(COLUMN_DESCRIPTION)),
+                    priority = it.getString(it.getColumnIndexOrThrow(COLUMN_PRIORITY)),
+                    category = it.getString(it.getColumnIndexOrThrow(COLUMN_CATEGORY))
+                )
+            }
+        }
+
+        db.close()
+        return task
     }
 }

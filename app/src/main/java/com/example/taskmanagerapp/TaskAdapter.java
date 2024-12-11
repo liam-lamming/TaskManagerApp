@@ -8,6 +8,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder> {
@@ -20,9 +21,30 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         void onTaskClick(Task task, int position);
     }
 
-    public TaskAdapter(List<Task> tasks, OnTaskClickListener onTaskClickListener) {
-        this.tasks = tasks;
+    public TaskAdapter(OnTaskClickListener onTaskClickListener) {
+        this.tasks = new ArrayList<>();
         this.onTaskClickListener = onTaskClickListener;
+    }
+
+    public void setTasks(List<Task> newTasks) {
+        tasks.clear();
+        tasks.addAll(newTasks);
+        notifyDataSetChanged();
+    }
+
+    public void addTask(Task task) {
+        tasks.add(task);
+        notifyItemInserted(tasks.size() - 1);
+    }
+
+    public void updateTask(int position, Task task) {
+        tasks.set(position, task);
+        notifyItemChanged(position);
+    }
+
+    public void removeTask(int position) {
+        tasks.remove(position);
+        notifyItemRemoved(position);
     }
 
     @NonNull
