@@ -5,7 +5,7 @@
         <color name="primaryColor">#689f38</color> <!-- Muted green -->
         <color name="primaryColorDark">#387002</color> <!-- Darker green -->
         <color name="accentColor">#aed581</color> <!-- Pastel green -->
-
+        <color name="darkText">#000000</color>
         <!-- Backgrounds -->
         <color name="backgroundLight">#f5f5f5</color> <!-- Very light gray -->
         <color name="backgroundDark">#212121</color> <!-- Dark gray -->
