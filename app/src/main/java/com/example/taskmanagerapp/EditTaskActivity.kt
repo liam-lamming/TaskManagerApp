@@ -28,7 +28,7 @@ class EditTaskActivity : AppCompatActivity() {
         val editTextDescription: EditText = findViewById(R.id.editDescription)
         val spinnerPriority: Spinner = findViewById(R.id.editPriority)
         val spinnerCategory: Spinner = findViewById(R.id.editCategory)
-        val buttonSave: Button = findViewById(R.id.btnUpdateTask)
+        val buttonSave: Button = findViewById(R.id.btnSaveTask)
 
         // Initialize the database helper
         dbHelper = TaskDatabaseHelper(this)

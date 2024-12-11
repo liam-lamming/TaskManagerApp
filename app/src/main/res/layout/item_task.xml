@@ -3,30 +3,44 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="12dp"
+    android:background="@drawable/item_background"
+    android:layout_marginBottom="8dp"
+    android:elevation="4dp">
 
     <TextView
         android:id="@+id/taskTitle"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Task Title"
-        android:textStyle="bold" />
+        android:textStyle="bold"
+        android:textColor="@color/textPrimary"
+        android:textSize="16sp" />
 
     <TextView
         android:id="@+id/taskDescription"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Task Description" />
+        android:text="Task Description"
+        android:textColor="@color/textSecondary"
+        android:textSize="14sp"
+        android:layout_marginTop="4dp" />
 
     <TextView
         android:id="@+id/taskPriority"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Priority: High" />
+        android:text="Priority: High"
+        android:textColor="@color/textPrimary"
+        android:textSize="14sp"
+        android:layout_marginTop="4dp" />
 
     <TextView
         android:id="@+id/taskCategory"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Category: Work" />
+        android:text="Category: Work"
+        android:textColor="@color/textSecondary"
+        android:textSize="14sp"
+        android:layout_marginTop="4dp" />
 </LinearLayout>

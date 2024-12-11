@@ -1,6 +1,34 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="teal_200">#008080</color>
+    <!-- Primary Colors -->
+
+        <!-- Primary Colors -->
+        <color name="primaryColor">#689f38</color> <!-- Muted green -->
+        <color name="primaryColorDark">#387002</color> <!-- Darker green -->
+        <color name="accentColor">#aed581</color> <!-- Pastel green -->
+
+        <!-- Backgrounds -->
+        <color name="backgroundLight">#f5f5f5</color> <!-- Very light gray -->
+        <color name="backgroundDark">#212121</color> <!-- Dark gray -->
+        <color name="recyclerBackground">#ffffff</color> <!-- White -->
+        <color name="itemDivider">#e0e0e0</color> <!-- Light gray -->
+        <color name="itemBackground">#ffff</color> <!-- Very light pastel green -->
+
+        <!-- Text Colors -->
+        <color name="textPrimary">#212121</color> <!-- Dark gray -->
+        <color name="textSecondary">#757575</color> <!-- Medium gray -->
+
+        <!-- Action Button Colors -->
+        <color name="fabColor">#689f38</color> <!-- Muted green -->
+        <color name="fabIconColor">#ffffff</color> <!-- White -->
+
+        <!-- Button Colors -->
+        <color name="buttonColor">#aed581</color> <!-- Pastel green -->
+        <color name="buttonTextColor">#ffffff</color> <!-- White -->
+    <color name="muted_blue">#A3C6E8</color>
+    <color name="muted_blue_dark">#7AA1C2</color>
+    <color name="muted_green">#BFDCC9</color>
+    <color name="muted_green_dark">#98B3A4</color>
+
+
+
 </resources>
