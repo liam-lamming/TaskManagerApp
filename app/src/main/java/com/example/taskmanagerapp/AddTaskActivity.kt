@@ -3,14 +3,21 @@ package com.example.taskmanagerapp
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.google.firebase.database.FirebaseDatabase
 
 class AddTaskActivity : AppCompatActivity() {
 
     private lateinit var dbHelper: TaskDatabaseHelper
+    private val firebaseDatabase = FirebaseDatabase.getInstance()
+
+    companion object {
+        private const val TAG = "AddTaskActivity"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,24 +50,42 @@ class AddTaskActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Create a new task object
+            // Generate a unique task ID using Firebase
+            val taskId = firebaseDatabase.getReference("tasks").push().key
+            if (taskId == null) {
+                Toast.makeText(this, "Failed to generate task ID", Toast.LENGTH_SHORT).show()
+                Log.e(TAG, "Failed to generate unique task ID from Firebase")
+                return@setOnClickListener
+            }
+
+            // Create a new task object with the generated ID
             val newTask = Task(
-                id = 0, // Temporary ID, will be updated after database insertion
+                id = taskId.hashCode(), // Use the hash of the Firebase ID as the SQLite ID
                 title = title,
                 description = description,
                 priority = priority,
                 category = category
             )
 
-            // Save the task to the SQLite database
-            val newTaskId = dbHelper.addTask(newTask)
-            if (newTaskId == -1L) {
-                Toast.makeText(this, "Failed to save task", Toast.LENGTH_SHORT).show()
+            // Save the task to SQLite
+            val success = dbHelper.upsertTask(newTask)
+            if (!success) {
+                Toast.makeText(this, "Failed to save task in SQLite", Toast.LENGTH_SHORT).show()
+                Log.e(TAG, "Failed to save task in SQLite")
                 return@setOnClickListener
             }
 
-            // Update the task ID with the value from the database
-            newTask.id = newTaskId.toInt()
+            // Save the task to Firebase
+            firebaseDatabase.getReference("tasks").child(taskId)
+                .setValue(newTask)
+                .addOnSuccessListener {
+                    Log.d(TAG, "Task saved to Firebase with ID: $taskId")
+                    Toast.makeText(this, "Task saved successfully", Toast.LENGTH_SHORT).show()
+                }
+                .addOnFailureListener { error ->
+                    Log.e(TAG, "Failed to save task to Firebase", error)
+                    Toast.makeText(this, "Failed to sync with Firebase", Toast.LENGTH_SHORT).show()
+                }
 
             // Pass the new task back to MainActivity
             val resultIntent = Intent().apply {

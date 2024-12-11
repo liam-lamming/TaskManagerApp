@@ -6,8 +6,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-class TaskDatabaseHelper(context: Context) :
-    SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         private const val DATABASE_NAME = "task_manager.db"
@@ -40,9 +39,9 @@ class TaskDatabaseHelper(context: Context) :
     }
 
     /**
-     * Adds a new task to the database.
+     * Inserts or updates a task in the database.
      */
-    fun addTask(task: Task): Long {
+    fun upsertTask(task: Task): Boolean {
         val db = writableDatabase
         val values = ContentValues().apply {
             put(COLUMN_TITLE, task.title)
@@ -50,9 +49,24 @@ class TaskDatabaseHelper(context: Context) :
             put(COLUMN_PRIORITY, task.priority)
             put(COLUMN_CATEGORY, task.category)
         }
-        val taskId = db.insert(TABLE_NAME, null, values)
-        db.close()
-        return taskId
+
+        val rowsAffected: Int
+        val success: Boolean
+        if (isTaskInDatabase(task.id)) {
+            // Update the task if it already exists
+            rowsAffected = db.update(
+                TABLE_NAME,
+                values,
+                "$COLUMN_ID = ?",
+                arrayOf(task.id.toString())
+            )
+            success = rowsAffected > 0
+        } else {
+            // Insert the task as a new entry
+            values.put(COLUMN_ID, task.id)
+            success = db.insert(TABLE_NAME, null, values) != -1L
+        }
+        return success
     }
 
     /**
@@ -70,55 +84,12 @@ class TaskDatabaseHelper(context: Context) :
             null,
             null
         )
-        cursor?.use {
+        cursor.use {
             while (it.moveToNext()) {
-                val task = Task(
-                    id = it.getInt(it.getColumnIndexOrThrow(COLUMN_ID)),
-                    title = it.getString(it.getColumnIndexOrThrow(COLUMN_TITLE)),
-                    description = it.getString(it.getColumnIndexOrThrow(COLUMN_DESCRIPTION)),
-                    priority = it.getString(it.getColumnIndexOrThrow(COLUMN_PRIORITY)),
-                    category = it.getString(it.getColumnIndexOrThrow(COLUMN_CATEGORY))
-                )
-                taskList.add(task)
+                taskList.add(cursorToTask(it))
             }
         }
-        db.close()
         return taskList
-    }
-
-    /**
-     * Updates an existing task in the database.
-     */
-    fun updateTask(task: Task): Int {
-        val db = writableDatabase
-        val values = ContentValues().apply {
-            put(COLUMN_TITLE, task.title)
-            put(COLUMN_DESCRIPTION, task.description)
-            put(COLUMN_PRIORITY, task.priority)
-            put(COLUMN_CATEGORY, task.category)
-        }
-        val rowsAffected = db.update(
-            TABLE_NAME,
-            values,
-            "$COLUMN_ID = ?",
-            arrayOf(task.id.toString())
-        )
-        db.close()
-        return rowsAffected
-    }
-
-    /**
-     * Deletes a task from the database by ID.
-     */
-    fun deleteTask(taskId: Int): Int {
-        val db = writableDatabase
-        val rowsDeleted = db.delete(
-            TABLE_NAME,
-            "$COLUMN_ID = ?",
-            arrayOf(taskId.toString())
-        )
-        db.close()
-        return rowsDeleted
     }
 
     /**
@@ -136,18 +107,56 @@ class TaskDatabaseHelper(context: Context) :
             null
         )
         var task: Task? = null
-        cursor?.use {
+        cursor.use {
             if (it.moveToFirst()) {
-                task = Task(
-                    id = it.getInt(it.getColumnIndexOrThrow(COLUMN_ID)),
-                    title = it.getString(it.getColumnIndexOrThrow(COLUMN_TITLE)),
-                    description = it.getString(it.getColumnIndexOrThrow(COLUMN_DESCRIPTION)),
-                    priority = it.getString(it.getColumnIndexOrThrow(COLUMN_PRIORITY)),
-                    category = it.getString(it.getColumnIndexOrThrow(COLUMN_CATEGORY))
-                )
+                task = cursorToTask(it)
             }
         }
-        db.close()
         return task
+    }
+
+    /**
+     * Deletes a task from the database by ID.
+     */
+    fun deleteTask(taskId: Int): Boolean {
+        val db = writableDatabase
+        val rowsDeleted = db.delete(
+            TABLE_NAME,
+            "$COLUMN_ID = ?",
+            arrayOf(taskId.toString())
+        )
+        return rowsDeleted > 0
+    }
+
+    /**
+     * Checks if a task with the given ID exists in the database.
+     */
+    private fun isTaskInDatabase(taskId: Int): Boolean {
+        val db = readableDatabase
+        val cursor = db.query(
+            TABLE_NAME,
+            arrayOf(COLUMN_ID),
+            "$COLUMN_ID = ?",
+            arrayOf(taskId.toString()),
+            null,
+            null,
+            null
+        )
+        val exists = cursor.count > 0
+        cursor.close()
+        return exists
+    }
+
+    /**
+     * Converts a cursor row into a Task object.
+     */
+    private fun cursorToTask(cursor: Cursor): Task {
+        return Task(
+            id = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ID)),
+            title = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TITLE)),
+            description = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DESCRIPTION)),
+            priority = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PRIORITY)),
+            category = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CATEGORY))
+        )
     }
 }
