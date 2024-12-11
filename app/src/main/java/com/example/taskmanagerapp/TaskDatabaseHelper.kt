@@ -6,7 +6,8 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+class TaskDatabaseHelper(context: Context) :
+    SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         private const val DATABASE_NAME = "task_manager.db"
@@ -20,8 +21,8 @@ class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         private const val COLUMN_CATEGORY = "category"
     }
 
-    override fun onCreate(db: SQLiteDatabase?) {
-        val CREATE_TABLE = """
+    override fun onCreate(db: SQLiteDatabase) {
+        val createTableQuery = """
             CREATE TABLE $TABLE_NAME (
                 $COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,
                 $COLUMN_TITLE TEXT NOT NULL,
@@ -30,18 +31,16 @@ class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
                 $COLUMN_CATEGORY TEXT
             )
         """.trimIndent()
-        db?.execSQL(CREATE_TABLE)
+        db.execSQL(createTableQuery)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
-        if (oldVersion < newVersion) {
-            db?.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
-            onCreate(db)
-        }
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
+        onCreate(db)
     }
 
     /**
-     * Add a new task to the database.
+     * Adds a new task to the database.
      */
     fun addTask(task: Task): Long {
         val db = writableDatabase
@@ -51,47 +50,44 @@ class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
             put(COLUMN_PRIORITY, task.priority)
             put(COLUMN_CATEGORY, task.category)
         }
-
-        return try {
-            val taskId = db.insertOrThrow(TABLE_NAME, null, values)
-            taskId
-        } catch (e: Exception) {
-            -1L // Return -1 to indicate failure
-        } finally {
-            db.close()
-        }
+        val taskId = db.insert(TABLE_NAME, null, values)
+        db.close()
+        return taskId
     }
 
     /**
-     * Retrieve all tasks from the database.
+     * Retrieves all tasks from the database.
      */
     fun getAllTasks(): List<Task> {
         val taskList = mutableListOf<Task>()
-        val query = "SELECT * FROM $TABLE_NAME"
         val db = readableDatabase
-        val cursor: Cursor? = db.rawQuery(query, null)
-
+        val cursor = db.query(
+            TABLE_NAME,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
         cursor?.use {
-            if (it.moveToFirst()) {
-                do {
-                    val task = Task(
-                        id = it.getInt(it.getColumnIndexOrThrow(COLUMN_ID)),
-                        title = it.getString(it.getColumnIndexOrThrow(COLUMN_TITLE)),
-                        description = it.getString(it.getColumnIndexOrThrow(COLUMN_DESCRIPTION)),
-                        priority = it.getString(it.getColumnIndexOrThrow(COLUMN_PRIORITY)),
-                        category = it.getString(it.getColumnIndexOrThrow(COLUMN_CATEGORY))
-                    )
-                    taskList.add(task)
-                } while (it.moveToNext())
+            while (it.moveToNext()) {
+                val task = Task(
+                    id = it.getInt(it.getColumnIndexOrThrow(COLUMN_ID)),
+                    title = it.getString(it.getColumnIndexOrThrow(COLUMN_TITLE)),
+                    description = it.getString(it.getColumnIndexOrThrow(COLUMN_DESCRIPTION)),
+                    priority = it.getString(it.getColumnIndexOrThrow(COLUMN_PRIORITY)),
+                    category = it.getString(it.getColumnIndexOrThrow(COLUMN_CATEGORY))
+                )
+                taskList.add(task)
             }
         }
-
         db.close()
         return taskList
     }
 
     /**
-     * Update an existing task.
+     * Updates an existing task in the database.
      */
     fun updateTask(task: Task): Int {
         val db = writableDatabase
@@ -101,50 +97,36 @@ class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
             put(COLUMN_PRIORITY, task.priority)
             put(COLUMN_CATEGORY, task.category)
         }
-
-        return try {
-            db.update(TABLE_NAME, values, "$COLUMN_ID = ?", arrayOf(task.id.toString()))
-        } catch (e: Exception) {
-            0 // Return 0 to indicate failure
-        } finally {
-            db.close()
-        }
+        val rowsAffected = db.update(
+            TABLE_NAME,
+            values,
+            "$COLUMN_ID = ?",
+            arrayOf(task.id.toString())
+        )
+        db.close()
+        return rowsAffected
     }
 
     /**
-     * Delete a task by its ID.
+     * Deletes a task from the database by ID.
      */
-    fun deleteTask(id: Int): Int {
+    fun deleteTask(taskId: Int): Int {
         val db = writableDatabase
-        return try {
-            db.delete(TABLE_NAME, "$COLUMN_ID = ?", arrayOf(id.toString()))
-        } catch (e: Exception) {
-            0 // Return 0 to indicate failure
-        } finally {
-            db.close()
-        }
+        val rowsDeleted = db.delete(
+            TABLE_NAME,
+            "$COLUMN_ID = ?",
+            arrayOf(taskId.toString())
+        )
+        db.close()
+        return rowsDeleted
     }
 
     /**
-     * Clear all tasks from the database (for testing or reset purposes).
-     */
-    fun clearTasks(): Int {
-        val db = writableDatabase
-        return try {
-            db.delete(TABLE_NAME, null, null)
-        } catch (e: Exception) {
-            0 // Return 0 to indicate failure
-        } finally {
-            db.close()
-        }
-    }
-
-    /**
-     * Retrieve a task by its ID.
+     * Retrieves a task by its ID.
      */
     fun getTaskById(id: Int): Task? {
         val db = readableDatabase
-        val cursor: Cursor? = db.query(
+        val cursor = db.query(
             TABLE_NAME,
             null,
             "$COLUMN_ID = ?",
@@ -153,7 +135,6 @@ class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
             null,
             null
         )
-
         var task: Task? = null
         cursor?.use {
             if (it.moveToFirst()) {
@@ -166,7 +147,6 @@ class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
                 )
             }
         }
-
         db.close()
         return task
     }

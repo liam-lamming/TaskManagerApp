@@ -43,9 +43,9 @@ class AddTaskActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Create a new task
+            // Create a new task object
             val newTask = Task(
-                id = 0, // Temporary ID, will be updated after insertion
+                id = 0, // Temporary ID, will be updated after database insertion
                 title = title,
                 description = description,
                 priority = priority,
@@ -59,7 +59,7 @@ class AddTaskActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Update the task ID
+            // Update the task ID with the value from the database
             newTask.id = newTaskId.toInt()
 
             // Pass the new task back to MainActivity

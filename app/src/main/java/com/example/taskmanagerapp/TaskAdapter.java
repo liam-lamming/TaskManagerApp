@@ -4,25 +4,20 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
 import java.util.ArrayList;
 import java.util.List;
 
 public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder> {
-
-    private final List<Task> tasks;
+    private final List<Task> tasks = new ArrayList<>();
     private final OnTaskClickListener onTaskClickListener;
 
-    // Interface for handling task click events
     public interface OnTaskClickListener {
         void onTaskClick(Task task, int position);
     }
 
     public TaskAdapter(OnTaskClickListener onTaskClickListener) {
-        this.tasks = new ArrayList<>();
         this.onTaskClickListener = onTaskClickListener;
     }
 
@@ -50,8 +45,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     @NonNull
     @Override
     public TaskViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_task, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_task, parent, false);
         return new TaskViewHolder(view);
     }
 
@@ -63,12 +57,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         holder.taskPriority.setText(task.getPriority());
         holder.taskCategory.setText(task.getCategory());
 
-        // Set click listener for each task item
-        holder.itemView.setOnClickListener(v -> {
-            if (onTaskClickListener != null) {
-                onTaskClickListener.onTaskClick(task, position);
-            }
-        });
+        holder.itemView.setOnClickListener(v -> onTaskClickListener.onTaskClick(task, position));
     }
 
     @Override
@@ -79,7 +68,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     static class TaskViewHolder extends RecyclerView.ViewHolder {
         TextView taskTitle, taskDescription, taskPriority, taskCategory;
 
-        public TaskViewHolder(@NonNull View itemView) {
+        TaskViewHolder(@NonNull View itemView) {
             super(itemView);
             taskTitle = itemView.findViewById(R.id.taskTitle);
             taskDescription = itemView.findViewById(R.id.taskDescription);
