@@ -6,9 +6,11 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Spinner
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.database.FirebaseDatabase
+import java.util.*
 
 class AddTaskActivity : AppCompatActivity() {
 
@@ -24,11 +26,11 @@ class AddTaskActivity : AppCompatActivity() {
         setContentView(R.layout.activity_add_task)
 
         // Initialize views
-        val editTextTitle: EditText = findViewById(R.id.editTextTitle)
-        val editTextDescription: EditText = findViewById(R.id.editTextDescription)
-        val editTextPriority: EditText = findViewById(R.id.editTextPriority)
-        val editTextCategory: EditText = findViewById(R.id.editTextCategory)
-        val buttonSave: Button = findViewById(R.id.buttonSave)
+        val editTextTitle: EditText = findViewById(R.id.inputTitle)
+        val editTextDescription: EditText = findViewById(R.id.inputDescription)
+        val spinnerPriority: Spinner = findViewById(R.id.inputPriority)
+        val spinnerCategory: Spinner = findViewById(R.id.inputCategory)
+        val buttonSave: Button = findViewById(R.id.btnSaveTask)
 
         // Initialize the database helper
         dbHelper = TaskDatabaseHelper(this)
@@ -37,8 +39,8 @@ class AddTaskActivity : AppCompatActivity() {
         buttonSave.setOnClickListener {
             val title = editTextTitle.text.toString().trim()
             val description = editTextDescription.text.toString().trim()
-            val priority = editTextPriority.text.toString().trim()
-            val category = editTextCategory.text.toString().trim()
+            val priority = spinnerPriority.selectedItem?.toString() ?: ""
+            val category = spinnerCategory.selectedItem?.toString() ?: ""
 
             // Validate inputs
             if (title.isEmpty()) {
@@ -50,44 +52,45 @@ class AddTaskActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Generate a unique task ID using Firebase
-            val taskId = firebaseDatabase.getReference("tasks").push().key
-            if (taskId == null) {
+            // Generate a unique task ID
+            val firebaseKey = firebaseDatabase.getReference("tasks").push().key
+            if (firebaseKey == null) {
                 Toast.makeText(this, "Failed to generate task ID", Toast.LENGTH_SHORT).show()
                 Log.e(TAG, "Failed to generate unique task ID from Firebase")
                 return@setOnClickListener
             }
 
-            // Create a new task object with the generated ID
+            val taskId = UUID.randomUUID().toString()
+
+            // Create a new task object
             val newTask = Task(
-                id = taskId.hashCode(), // Use the hash of the Firebase ID as the SQLite ID
+                id = taskId,
+                firebaseKey = firebaseKey,
                 title = title,
                 description = description,
                 priority = priority,
                 category = category
             )
 
-            // Save the task to SQLite
-            val success = dbHelper.upsertTask(newTask)
-            if (!success) {
+            // Save to SQLite
+            if (!dbHelper.upsertTask(newTask)) {
                 Toast.makeText(this, "Failed to save task in SQLite", Toast.LENGTH_SHORT).show()
                 Log.e(TAG, "Failed to save task in SQLite")
                 return@setOnClickListener
             }
 
-            // Save the task to Firebase
-            firebaseDatabase.getReference("tasks").child(taskId)
+            // Save to Firebase
+            firebaseDatabase.getReference("tasks").child(firebaseKey)
                 .setValue(newTask)
                 .addOnSuccessListener {
-                    Log.d(TAG, "Task saved to Firebase with ID: $taskId")
                     Toast.makeText(this, "Task saved successfully", Toast.LENGTH_SHORT).show()
                 }
                 .addOnFailureListener { error ->
-                    Log.e(TAG, "Failed to save task to Firebase", error)
                     Toast.makeText(this, "Failed to sync with Firebase", Toast.LENGTH_SHORT).show()
+                    Log.e(TAG, "Failed to save task to Firebase", error)
                 }
 
-            // Pass the new task back to MainActivity
+            // Return to MainActivity
             val resultIntent = Intent().apply {
                 putExtra(MainActivity.NEW_TASK_EXTRA, newTask)
             }

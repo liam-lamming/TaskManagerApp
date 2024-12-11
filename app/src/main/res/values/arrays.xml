@@ -1,0 +1,14 @@
+<resources>
+    <string-array name="priority_options">
+        <item>Low</item>
+        <item>Medium</item>
+        <item>High</item>
+    </string-array>
+
+    <string-array name="category_options">
+        <item>Work</item>
+        <item>Personal</item>
+        <item>Health</item>
+        <item>Other</item>
+    </string-array>
+</resources>

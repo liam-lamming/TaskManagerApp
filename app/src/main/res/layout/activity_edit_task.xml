@@ -1,57 +1,39 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
 
     <EditText
-        android:id="@+id/editTextTitle"
-        android:layout_width="0dp"
+        android:id="@+id/editTitle"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Task Title"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp" />
+        android:hint="@string/task_title"
+        android:inputType="text" />
 
     <EditText
-        android:id="@+id/editTextDescription"
-        android:layout_width="0dp"
+        android:id="@+id/editDescription"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Task Description"
-        app:layout_constraintTop_toBottomOf="@id/editTextTitle"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp" />
+        android:hint="@string/task_description"
+        android:inputType="textMultiLine"
+        android:minLines="3" />
 
-    <EditText
-        android:id="@+id/editTextPriority"
-        android:layout_width="0dp"
+    <Spinner
+        android:id="@+id/editPriority"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Task Priority"
-        app:layout_constraintTop_toBottomOf="@id/editTextDescription"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp" />
+        android:entries="@array/priority_options" />
 
-    <EditText
-        android:id="@+id/editTextCategory"
-        android:layout_width="0dp"
+    <Spinner
+        android:id="@+id/editCategory"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Task Category"
-        app:layout_constraintTop_toBottomOf="@id/editTextPriority"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp" />
+        android:entries="@array/category_options" />
 
     <Button
-        android:id="@+id/buttonSave"
-        android:layout_width="wrap_content"
+        android:id="@+id/btnUpdateTask"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Save"
-        app:layout_constraintTop_toBottomOf="@id/editTextCategory"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="16dp" />
-</androidx.constraintlayout.widget.ConstraintLayout>
+        android:text="@string/update_task" />
+</LinearLayout>

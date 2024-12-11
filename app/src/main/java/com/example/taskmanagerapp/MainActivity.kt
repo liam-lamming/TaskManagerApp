@@ -28,7 +28,6 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val NEW_TASK_EXTRA = "NEW_TASK"
         const val EDIT_TASK_EXTRA = "EDIT_TASK"
-        const val TASK_POSITION_EXTRA = "TASK_POSITION"
         private const val TAG = "MainActivity"
     }
 
@@ -82,13 +81,17 @@ class MainActivity : AppCompatActivity() {
                     for (taskSnapshot in snapshot.children) {
                         val task = taskSnapshot.getValue(Task::class.java)
                         if (task != null) {
-                            firebaseTasks.add(task)
-                            dbHelper.upsertTask(task) // Use upsert for consistency
+                            if (task.firebaseKey.isNotEmpty()) {
+                                firebaseTasks.add(task)
+                                dbHelper.upsertTask(task) // Use upsert for consistency
+                            } else {
+                                Log.e(TAG, "Task missing Firebase key: $task")
+                            }
                         }
                     }
 
                     taskList.clear()
-                    taskList.addAll(firebaseTasks)
+                    taskList.addAll(dbHelper.getAllTasks()) // Load from SQLite after sync
                     taskAdapter.setTasks(taskList)
                     Log.d(TAG, "Tasks synced from Firebase")
                     Toast.makeText(this@MainActivity, "Tasks synced successfully", Toast.LENGTH_SHORT).show()
@@ -103,29 +106,6 @@ class MainActivity : AppCompatActivity() {
                     isSyncing = false
                 }
             })
-    }
-
-    /**
-     * Write a task to Firebase Realtime Database.
-     */
-    private fun writeToRealtimeDatabase(task: Task) {
-        val taskRef = firebaseDatabase.getReference("tasks").child(task.id.toString())
-
-        taskRef.get().addOnSuccessListener { snapshot ->
-            if (!snapshot.exists()) { // Only add if it doesn't already exist
-                taskRef.setValue(task)
-                    .addOnSuccessListener {
-                        Log.d(TAG, "Task added to Firebase: ${task.title}")
-                        Toast.makeText(this, "Task added to Firebase", Toast.LENGTH_SHORT).show()
-                    }
-                    .addOnFailureListener { error ->
-                        Log.e(TAG, "Failed to write task to Firebase", error)
-                        Toast.makeText(this, "Failed to sync with Firebase", Toast.LENGTH_SHORT).show()
-                    }
-            } else {
-                Log.d(TAG, "Task already exists in Firebase: ${task.title}")
-            }
-        }
     }
 
     /**
@@ -144,7 +124,7 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Select an option")
             .setItems(arrayOf("Edit", "Delete")) { _, which ->
                 when (which) {
-                    0 -> navigateToEditTask(task, position)
+                    0 -> navigateToEditTask(task)
                     1 -> deleteTask(task, position)
                 }
             }
@@ -154,10 +134,9 @@ class MainActivity : AppCompatActivity() {
     /**
      * Navigate to EditTaskActivity.
      */
-    private fun navigateToEditTask(task: Task, position: Int) {
+    private fun navigateToEditTask(task: Task) {
         val intent = Intent(this, EditTaskActivity::class.java).apply {
             putExtra(EDIT_TASK_EXTRA, task)
-            putExtra(TASK_POSITION_EXTRA, position)
         }
         startActivityForResult(intent, 2)
     }
@@ -170,7 +149,7 @@ class MainActivity : AppCompatActivity() {
         taskList.removeAt(position)
         taskAdapter.notifyItemRemoved(position)
 
-        firebaseDatabase.getReference("tasks").child(task.id.toString()).removeValue()
+        firebaseDatabase.getReference("tasks").child(task.firebaseKey).removeValue()
             .addOnSuccessListener {
                 Toast.makeText(this, "Task deleted successfully", Toast.LENGTH_SHORT).show()
             }
@@ -190,16 +169,19 @@ class MainActivity : AppCompatActivity() {
                     val newTask = data?.getParcelableExtra<Task>(NEW_TASK_EXTRA)
                     newTask?.let {
                         dbHelper.upsertTask(it) // Upsert directly
-                        writeToRealtimeDatabase(it)
-                        loadTasksFromDatabase()
+                        taskList.add(it)
+                        taskAdapter.notifyItemInserted(taskList.size - 1)
                     }
                 }
                 2 -> { // Editing existing task
                     val updatedTask = data?.getParcelableExtra<Task>(EDIT_TASK_EXTRA)
                     updatedTask?.let {
                         dbHelper.upsertTask(it) // Upsert directly
-                        writeToRealtimeDatabase(it)
-                        loadTasksFromDatabase()
+                        val index = taskList.indexOfFirst { task -> task.id == it.id }
+                        if (index != -1) {
+                            taskList[index] = it
+                            taskAdapter.notifyItemChanged(index)
+                        }
                     }
                 }
             }

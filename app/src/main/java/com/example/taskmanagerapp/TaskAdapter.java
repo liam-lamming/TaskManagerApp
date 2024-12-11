@@ -46,7 +46,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
             @Override
             public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
-                return tasks.get(oldItemPosition).getId() == newTasks.get(newItemPosition).getId();
+                return tasks.get(oldItemPosition).getId().equals(newTasks.get(newItemPosition).getId());
             }
 
             @Override
@@ -79,7 +79,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     public void updateTask(Task updatedTask) {
         if (updatedTask == null) return; // Avoid null entries
         for (int i = 0; i < tasks.size(); i++) {
-            if (tasks.get(i).getId() == updatedTask.getId()) {
+            if (tasks.get(i).getId().equals(updatedTask.getId())) {
                 tasks.set(i, updatedTask);
                 notifyItemChanged(i);
                 return;
@@ -92,9 +92,9 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
      *
      * @param taskId The ID of the task to remove.
      */
-    public void removeTaskById(int taskId) {
+    public void removeTaskById(String taskId) {
         for (int i = 0; i < tasks.size(); i++) {
-            if (tasks.get(i).getId() == taskId) {
+            if (tasks.get(i).getId().equals(taskId)) {
                 tasks.remove(i);
                 notifyItemRemoved(i);
                 return;
