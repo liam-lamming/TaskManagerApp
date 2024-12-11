@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
 
         // Load tasks and sync with Firebase
         loadTasksFromDatabase()
-        syncFirebaseToSQLite()
+        setupFirebaseListener()
     }
 
     /**
@@ -67,43 +67,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Sync tasks from Firebase to SQLite.
+     * Setup Firebase listener to update tasks in real-time.
      */
-    private fun syncFirebaseToSQLite() {
-        if (isSyncing) return
-        isSyncing = true
-
+    private fun setupFirebaseListener() {
         firebaseDatabase.getReference("tasks")
-            .addListenerForSingleValueEvent(object : ValueEventListener {
+            .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
-                    val firebaseTasks = mutableListOf<Task>()
+                    taskList.clear()
 
                     for (taskSnapshot in snapshot.children) {
                         val task = taskSnapshot.getValue(Task::class.java)
-                        if (task != null) {
-                            if (task.firebaseKey.isNotEmpty()) {
-                                firebaseTasks.add(task)
-                                dbHelper.upsertTask(task) // Use upsert for consistency
-                            } else {
-                                Log.e(TAG, "Task missing Firebase key: $task")
-                            }
+                        if (task != null && task.firebaseKey.isNotEmpty()) {
+                            dbHelper.upsertTask(task) // Sync with local SQLite
+                        } else {
+                            Log.e(TAG, "Task missing Firebase key: $task")
                         }
                     }
 
-                    taskList.clear()
-                    taskList.addAll(dbHelper.getAllTasks()) // Load from SQLite after sync
+                    taskList.addAll(dbHelper.getAllTasks()) // Load updated tasks from SQLite
                     taskAdapter.setTasks(taskList)
-                    Log.d(TAG, "Tasks synced from Firebase")
-                    Toast.makeText(this@MainActivity, "Tasks synced successfully", Toast.LENGTH_SHORT).show()
-
-                    isSyncing = false
+                    taskAdapter.notifyDataSetChanged()
+                    Log.d(TAG, "Tasks updated from Firebase")
                 }
 
                 override fun onCancelled(error: DatabaseError) {
-                    Log.e(TAG, "Sync cancelled: ${error.message}")
-                    Toast.makeText(this@MainActivity, "Sync failed: ${error.message}", Toast.LENGTH_SHORT).show()
-
-                    isSyncing = false
+                    Log.e(TAG, "Firebase listener cancelled: ${error.message}")
+                    Toast.makeText(this@MainActivity, "Failed to load tasks: ${error.message}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -165,18 +154,18 @@ class MainActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == RESULT_OK) {
             when (requestCode) {
-                1 -> { // Adding new task
+                1 -> {
                     val newTask = data?.getParcelableExtra<Task>(NEW_TASK_EXTRA)
                     newTask?.let {
-                        dbHelper.upsertTask(it) // Upsert directly
+                        dbHelper.upsertTask(it)
                         taskList.add(it)
                         taskAdapter.notifyItemInserted(taskList.size - 1)
                     }
                 }
-                2 -> { // Editing existing task
+                2 -> {
                     val updatedTask = data?.getParcelableExtra<Task>(EDIT_TASK_EXTRA)
                     updatedTask?.let {
-                        dbHelper.upsertTask(it) // Upsert directly
+                        dbHelper.upsertTask(it)
                         val index = taskList.indexOfFirst { task -> task.id == it.id }
                         if (index != -1) {
                             taskList[index] = it
